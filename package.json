@@ -1,0 +1,34 @@
+{
+  "name": "ss-template",
+  "version": "2.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "postinstall": "npm i -g typescript @oracle/suitecloud-cli",
+    "eslint": "eslint \"src/TypeScript/**/*.ts\"",
+    "eslint:fix": "eslint --fix \"src/TypeScript/**/*.ts\"",
+    "deploy": "ss-deploy --js",
+    "build": "ss-build",
+    "build:js": "ss-build --js",
+    "watch": "ss-watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BrokenRubik/ss-template.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/BrokenRubik/ss-template/issues"
+  },
+  "homepage": "https://github.com/BrokenRubik/ss-template#readme",
+  "devDependencies": {
+    "@brokenrubik/eslint-config-ss": "^1.0.9",
+    "@brokenrubik/ss-build-tools": "^2.0.5",
+    "@hitc/netsuite-types": "2024.2.12",
+    "dotenv": "16.4.5",
+    "eslint": "8.49.0",
+    "shelljs": "0.8.5",
+    "typescript": "^5.4.5"
+  }
+}

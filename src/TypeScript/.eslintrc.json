@@ -1,0 +1,3 @@
+{
+    "extends": "@brokenrubik/eslint-config-ss"
+}
