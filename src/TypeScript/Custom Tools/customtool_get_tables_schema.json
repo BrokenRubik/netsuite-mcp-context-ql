@@ -1,0 +1,14 @@
+{
+    "tools": [
+        {
+            "name": "getTables",
+            "description": "Get all the tables available for this Netsuite Account",
+            "annotations": {
+                "title": "Get tables",
+                "readOnlyHint": true,
+                "idempotentHint": true,
+                "openWorldHint": false
+            }
+        }
+    ]
+}  

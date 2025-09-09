@@ -3,7 +3,7 @@
         // Specify the path for built files here
         // We recommend the project name, for example
         // "../../src/FileCabinet/SuiteScripts/my-custom-scripts"
-        "outDir": "../../src/FileCabinet/SuiteScripts/build",
+        "outDir": "../../src/FileCabinet/SuiteScripts",
         "rootDir": ".",
         "baseUrl": ".",
 
@@ -27,6 +27,7 @@
 
         "moduleResolution": "node",
         "experimentalDecorators": true,
+        
    
         // NetSuite type definitinos
         "paths": {
