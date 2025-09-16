@@ -3,6 +3,7 @@
         {
             "name": "getTables",
             "description": "Get all the tables available for this Netsuite Account",
+            "inputSchema": {},
             "annotations": {
                 "title": "Get tables",
                 "readOnlyHint": true,
