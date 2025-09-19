@@ -1,0 +1,6 @@
+<tool scriptid="customtool_context_ql">
+  <name>Custom Tool - Context QL</name>
+  <rpcschema>[/SuiteScripts/customtool_context_ql.json]</rpcschema>
+  <scriptfile>[/SuiteScripts/customtool_get_table_ids.js]</scriptfile>
+  <exposeto3rdpartyagents>T</exposeto3rdpartyagents>
+</tool>

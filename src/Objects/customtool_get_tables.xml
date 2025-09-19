@@ -1,6 +1,0 @@
-<tool scriptid="customtool_get_tables">
-  <name>Custom Tool - Get Tables</name>
-  <rpcschema>[/SuiteScripts/Custom Tools/customtool_get_tables_schema.json]</rpcschema>
-  <scriptfile>[/SuiteScripts/Custom Tools/customtool_get_tables.js]</scriptfile>
-  <exposeto3rdpartyagents>T</exposeto3rdpartyagents>
-</tool>    

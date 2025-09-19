@@ -1,0 +1,48 @@
+{
+  "tools": [
+    {
+      "name": "listTables",
+      "description": "Search and list NetSuite record types/tables with their IDs and labels. Use this to discover available data structures in the account.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "string",
+            "description": "Maximum number of tables to return (e.g., '50'). Leave empty for all results."
+          },
+          "search": {
+            "type": "string",
+            "description": "Filter tables by searching in ID or label (case-insensitive). Examples: 'customer', 'inventory', 'sales'"
+          }
+        },
+        "required": []
+      },
+      "annotations": {
+        "title": "NetSuite Tables Catalog",
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "getTableSchema",
+      "description": "Get complete field schema and structure for a specific NetSuite table. Use after finding a table ID with listTables.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Exact NetSuite table ID (case-sensitive). Examples: 'Customer', 'inventoryItem', 'salesOrder'"
+          }
+        },
+        "required": ["id"]
+      },
+      "annotations": {
+        "title": "NetSuite Table Schema",
+        "readOnlyHint": true,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    }
+  ]
+}
