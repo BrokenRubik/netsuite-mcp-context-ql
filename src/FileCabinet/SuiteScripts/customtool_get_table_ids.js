@@ -22,7 +22,7 @@ define(["N/file"], function (nFile) {
           manifestJson = JSON.parse(manifestText);
         } catch (e) {
           throw new Error(
-            `El archivo ${MANIFEST_PATH} no contiene JSON válido: ${e.message}`,
+            `The file ${MANIFEST_PATH} does not contain valid JSON: ${e.message}`,
           );
         }
         const rawTables = Array.isArray(manifestJson.tables)
@@ -70,7 +70,7 @@ define(["N/file"], function (nFile) {
         }
 
         const tableId = args.id.trim();
-        const tableFilePath = SCHEMAS_FOLDER + tableId + ".json";
+        const tableFilePath = SCHEMAS_FOLDER + tableId.toLowerCase() + ".json";
 
         try {
           const tableFile = nFile.load({
@@ -87,13 +87,13 @@ define(["N/file"], function (nFile) {
             };
           } catch (parseError) {
             return {
-              error: `Invalid JSON in table file ${tableId}.json: ${parseError.message}`
+              error: `Invalid JSON in table file ${tableId.toLowerCase()}.json: ${parseError.message}`
             };
           }
 
         } catch (fileError) {
           return {
-            error: `Table file not found: ${tableId}.json. Please ensure the file exists at ${tableFilePath}`
+            error: `Table file not found: ${tableId.toLowerCase()}.json. Please ensure the file exists at ${tableFilePath}`
           };
         }
 

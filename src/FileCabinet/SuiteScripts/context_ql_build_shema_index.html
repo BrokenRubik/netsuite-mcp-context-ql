@@ -1,0 +1,334 @@
+
+<style>
+  .bar {
+    height: 10px;
+    background: #eee;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .fill {
+    height: 100%;
+    width: 0%;
+    background: #5c9ded;
+    transition: width 0.2s;
+  }
+
+  .muted {
+    color: #666;
+    font-size: 12px;
+  }
+
+  .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    white-space: pre;
+    max-height: 160px;
+    overflow: auto;
+    border: 1px solid #eee;
+    padding: 8px;
+    border-radius: 6px;
+  }
+
+  .hidden {
+    display: none;
+  }
+
+  .btn {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+</style>
+
+<div>
+  <p class="muted" id="lastmsg">%LAST_MSG%</p>
+  <p>
+    <strong>Purpose:</strong> This process generates a comprehensive schema
+    catalog by reading NetSuite's <b>Records Catalog</b> via its internal API
+    and creating individual <code>.json</code> schema files for each record type
+    in the File Cabinet.
+  </p>
+  <p>
+    <strong>⚠️ Important:</strong> This process may take several minutes to
+    complete depending on the number of record types. Please
+    <strong>keep this browser tab open</strong> during the entire process to
+    avoid interruption.
+  </p>
+  <button id="startBtn" class="btn">Generate JSONs</button>
+  <div id="status" class="muted" style="margin-top: 10px"></div>
+  <div class="bar" style="margin-top: 8px">
+    <div id="fill" class="fill"></div>
+  </div>
+  <div
+    id="progress-text"
+    class="muted"
+    style="margin-top: 5px; text-align: center"
+  >
+    Ready to start
+  </div>
+  <div id="log" class="mono hidden" style="margin-top: 10px"></div>
+</div>
+
+<script>
+  (function () {
+    // Configuration: Number of concurrent requests
+    const CONCURRENT_REQUESTS = 10;
+
+    const btn = document.getElementById("startBtn");
+    const status = document.getElementById("status");
+    const fill = document.getElementById("fill");
+    const logEl = document.getElementById("log");
+    const lastmsg = document.getElementById("lastmsg");
+    const progressText = document.getElementById("progress-text");
+
+    function log(msg) {
+      logEl.classList.remove("hidden");
+      logEl.innerHTML = msg + "<br>" + logEl.innerHTML;
+    }
+
+    async function xhrGet(url) {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("GET", url, true);
+        xhr.onload = () =>
+          xhr.status === 200
+            ? resolve(xhr.responseText)
+            : reject(new Error("HTTP " + xhr.status));
+        xhr.onerror = () => reject(new Error("Network error"));
+        xhr.send();
+      });
+    }
+
+    async function postToSuitelet(bodyObj) {
+      return fetch(window.location.href, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bodyObj),
+      }).then((r) => {
+        if (!r.ok) throw new Error("Save failed: " + r.status);
+        return r.json();
+      });
+    }
+
+    function nowIsoLocal() {
+      const d = new Date();
+      const pad = (n) => ("0" + n).slice(-2);
+      return (
+        d.getFullYear() +
+        "-" +
+        pad(d.getMonth() + 1) +
+        "-" +
+        pad(d.getDate()) +
+        " " +
+        pad(d.getHours()) +
+        ":" +
+        pad(d.getMinutes()) +
+        ":" +
+        pad(d.getSeconds())
+      );
+    }
+
+    // Process items concurrently with a limit
+    async function processConcurrently(items, processFn, concurrentLimit) {
+      let index = 0;
+      const results = [];
+
+      async function processNext() {
+        while (index < items.length) {
+          const currentIndex = index++;
+          const item = items[currentIndex];
+          try {
+            const result = await processFn(item, currentIndex);
+            results[currentIndex] = { success: true, result };
+          } catch (error) {
+            results[currentIndex] = { success: false, error };
+          }
+        }
+      }
+
+      // Start concurrent workers
+      const workers = Array(Math.min(concurrentLimit, items.length))
+        .fill()
+        .map(() => processNext());
+
+      await Promise.all(workers);
+      return results;
+    }
+
+    // Clean and filter the response data to keep only essential SuiteQL information
+    function cleanResponseData(responseData) {
+      if (!responseData || !responseData.data) return responseData;
+      
+      const data = responseData.data;
+      
+      // Clean the main data object - keep only specific fields
+      const cleanedData = {
+        availabilityDetails: data.availabilityDetails,
+        id: data.id,
+        isAvailable: data.isAvailable,
+        label: data.label
+      };
+      
+      // Process fields array
+      if (data.fields && Array.isArray(data.fields)) {
+        cleanedData.fields = data.fields
+          .filter(field => field.isAvailable === true) // Only keep available fields
+          .map(field => {
+            const cleanField = {
+              id: field.id,
+              isAvailable: field.isAvailable,
+              dataType: field.dataType,
+              fieldType: field.fieldType,
+              isColumn: field.isColumn,
+              label: field.label
+            };
+            
+            // Process joins for this field
+            if (field.joins && Array.isArray(field.joins)) {
+              cleanField.joins = field.joins.map(join => {
+                const cleanJoin = {
+                  fieldId: join.fieldId,
+                  cardinality: join.cardinality,
+                  isAvailable: join.isAvailable,
+                  label: join.label,
+                  type: join.type
+                };
+                
+                // Add sourceTargetType information if available
+                if (join.sourceTargetType) {
+                  cleanJoin.sourceTargetType = {
+                    id: join.sourceTargetType.id
+                  };
+                  
+                  // Add joinPairs if available
+                  if (join.sourceTargetType.joinPairs && Array.isArray(join.sourceTargetType.joinPairs)) {
+                    cleanJoin.sourceTargetType.joinPairs = join.sourceTargetType.joinPairs.map(pair => ({
+                      id: pair.id,
+                      label: pair.label
+                    }));
+                  }
+                }
+                
+                return cleanJoin;
+              });
+            }
+            
+            return cleanField;
+          });
+      }
+      
+      return cleanedData;
+    }
+
+    async function run() {
+      btn.disabled = true;
+      status.textContent = "Loading record types list...";
+
+      const rc = "/app/recordscatalog/rcendpoint.nl";
+      const dataList = encodeURI(JSON.stringify({ structureType: "FLAT" }));
+      const listUrl = rc + "?action=getRecordTypes&data=" + dataList;
+
+      const listResp = await xhrGet(listUrl);
+      const recordTypes = JSON.parse(listResp);
+
+      const allItems = recordTypes && recordTypes.data ? recordTypes.data : [];
+      // Filter to only available records
+      const items = allItems.filter(item => item.isAvailable === true);
+      const total = items.length || 0;
+      const totalAll = allItems.length || 0;
+      let completed = 0;
+      progressText.textContent = `Found ${total} available record types to process (${totalAll - total} unavailable filtered out, ${CONCURRENT_REQUESTS} concurrent requests)`;
+      log(
+        "Record types: " +
+          total + " available (filtered out " + (totalAll - total) + " unavailable)" +
+          " (processing " +
+          CONCURRENT_REQUESTS +
+          " concurrently)",
+      );
+
+      // Process function for each record type
+      async function processRecordType(rt, index) {
+        const scriptId = rt.id;
+
+        // The exact detailType can be adjusted; here we leave it as SS_ANAL as in your example:
+        const dataDetail = encodeURI(
+          JSON.stringify({ scriptId: scriptId, detailType: "SS_ANAL" }),
+        );
+        const detUrl = rc + "?action=getRecordTypeDetail&data=" + dataDetail;
+
+        const detResp = await xhrGet(detUrl);
+        const detailObj = JSON.parse(detResp);
+        
+        // Clean the response data to remove unnecessary information
+        const cleanedObj = cleanResponseData(detailObj);
+
+        const savePayload = {
+          action: "save",
+          name: scriptId.toLowerCase() + ".json",
+          json: JSON.stringify(cleanedObj, null, 2),
+        };
+        await postToSuitelet(savePayload);
+
+        // Update progress
+        completed++;
+        const pct = total ? Math.round((completed / total) * 100) : 0;
+        fill.style.width = pct + "%";
+        status.textContent = `Processing: ${completed}/${total} completed (${pct}%)`;
+        progressText.textContent = `Progress: ${completed}/${total} (${pct}%) - ${scriptId} completed`;
+
+        log("✔ Saved: " + scriptId.toLowerCase() + ".json");
+        return scriptId;
+      }
+
+      // Process all items concurrently
+      const results = await processConcurrently(
+        items,
+        processRecordType,
+        CONCURRENT_REQUESTS,
+      );
+
+      // Log any errors
+      results.forEach((result, index) => {
+        if (!result.success) {
+          const scriptId = items[index].id;
+          log("✖ Error with " + scriptId + ": " + result.error.message);
+        }
+      });
+
+      // Save/update manifest.json
+      try {
+        // Create tables list for manifest
+        const tablesList = items.map(item => ({
+          id: item.id.toLowerCase(),
+          label: item.label || item.id,
+          originalId: item.id
+        }));
+        
+        const completionTimestamp = nowIsoLocal();
+        await postToSuitelet({
+          action: "saveManifest",
+          name: "manifest.json",
+          json: JSON.stringify({ 
+            lastGenerated: completionTimestamp,
+            tables: tablesList
+          }, null, 2),
+        });
+        lastmsg.innerHTML =
+          "Last schema generated: <b>" + completionTimestamp + "</b>";
+        log("✔ Manifest updated: manifest.json");
+      } catch (e) {
+        log("✖ Could not update manifest: " + e.message);
+      }
+
+      status.textContent = "Completed.";
+      progressText.textContent = `✅ Process completed! Generated ${completed} schema files using ${CONCURRENT_REQUESTS} concurrent requests.`;
+      btn.disabled = false;
+    }
+
+    btn.addEventListener("click", run);
+  })();
+</script>
+
+

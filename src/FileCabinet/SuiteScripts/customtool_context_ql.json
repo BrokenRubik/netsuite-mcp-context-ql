@@ -8,11 +8,11 @@
         "properties": {
           "limit": {
             "type": "string",
-            "description": "Maximum number of tables to return (e.g., '50'). Leave empty for all results."
+            "description": "Maximum number of tables to return (e.g., '50'). Leave empty for all results. Examples of highly-used tables: 'transaction', 'transactionline', 'customer', 'item', 'inventorybalance'."
           },
           "search": {
             "type": "string",
-            "description": "Filter tables by searching in ID or label (case-insensitive). Examples: 'customer', 'inventory', 'sales'"
+            "description": "Filter tables by searching in ID or label (case-insensitive). Examples: 'customer', 'inventory', 'account', 'employee', 'location', 'subsidiary', 'itemprice', 'supportcase'."
           }
         },
         "required": []
@@ -32,7 +32,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "Exact NetSuite table ID (case-sensitive). Examples: 'Customer', 'inventoryItem', 'salesOrder'"
+            "description": "NetSuite table ID (verify first with listTables). Common examples: 'transaction' (all transactions), 'transactionline' (line items), 'customer' (customer master), 'item' (item master), 'inventorybalance' (current stock by location), 'employee', 'account', 'location', 'subsidiary', 'itemprice', 'supportcase'."
           }
         },
         "required": ["id"]
