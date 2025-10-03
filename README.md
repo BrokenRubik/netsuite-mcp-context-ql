@@ -38,7 +38,7 @@ cd netsuite-mcp-context-ql
 suitecloud account:setup
 ```
 
-Follow prompts to configure your NetSuite account credentials. See [Authentication](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_1558708800.html) for details.
+Follow prompts to configure your NetSuite account credentials.
 
 ### 3. Validate and Deploy
 
@@ -46,10 +46,6 @@ Follow prompts to configure your NetSuite account credentials. See [Authenticati
 suitecloud project:validate
 suitecloud project:deploy
 ```
-
-See [Deploying Projects](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_1558708845.html) for deployment options.
-
-## Configuration
 
 ### 4. Create Schema Generator Suitelet
 
@@ -69,7 +65,7 @@ After deployment, you must create a Suitelet script record to generate the table
 4. **Save** the deployment
 5. **Copy the external URL** from the deployment record - you'll need this to generate schemas
 
-See [Script Deployment](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_4387799721.html) for more details.
+See [Script Deployment](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_0706024425.html) for more details.
 
 ### 6. Generate Schemas (Required Before Use)
 
@@ -78,6 +74,7 @@ See [Script Deployment](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online
 3. Wait for completion (may take several minutes)
 
 This creates:
+
 - Individual JSON files for each table in `/SuiteScripts/ContextQL/TablesSchemas/`
 - A `manifest.json` file indexing all available tables
 
@@ -90,6 +87,7 @@ This creates:
 If connected to an MCP-compatible AI client:
 
 **Example prompts:**
+
 ```
 "List all NetSuite tables with 'customer' in the name"
 "Show me the schema for the transaction table"
@@ -101,6 +99,7 @@ If connected to an MCP-compatible AI client:
 The Custom Tool exposes two functions defined in [`customtool_context_ql.json`](src/FileCabinet/SuiteScripts/ContextQL/customtool_context_ql.json):
 
 **`listTables(args)`**
+
 ```javascript
 // Input
 { "search": "inventory", "limit": "10" }
@@ -117,6 +116,7 @@ The Custom Tool exposes two functions defined in [`customtool_context_ql.json`](
 ```
 
 **`getTableSchema(args)`**
+
 ```javascript
 // Input
 { "id": "customer" }
@@ -147,6 +147,7 @@ MCP / AI Clients / External Integrations
 ```
 
 **Key Files:**
+
 - `src/Objects/customtool_context_ql.xml` - Custom Tool object definition
 - `src/FileCabinet/SuiteScripts/ContextQL/customtool_context_ql.js` - Tool implementation
 - `src/FileCabinet/SuiteScripts/ContextQL/customtool_context_ql.json` - RPC schema (MCP interface)
@@ -191,7 +192,7 @@ suitecloud object:import              # Import objects from account
 
 - [NetSuite Custom Tools Overview](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/article_162020236.html)
 - [Records Catalog Documentation](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_155929845760.html)
-- [SuiteCloud CLI Reference](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_1558708800.html)
+- [SuiteCloud CLI Reference](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/chapter_155931263126.html)
 - [Custom Tool API Guide](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/article_0902023450.html)
 - [Model Context Protocol](https://modelcontextprotocol.io)
 
