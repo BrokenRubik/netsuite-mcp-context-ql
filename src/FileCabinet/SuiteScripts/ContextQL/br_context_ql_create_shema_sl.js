@@ -7,7 +7,6 @@ define(["N/file", "N/search", "N/ui/serverWidget"], function (
   search,
   ui,
 ) {
-  const CONTEXT_QL_FOLDER = "/SuiteScripts/ContextQL";
   const SCHEMAS_FOLDER = "/SuiteScripts/ContextQL/TablesSchemas";
   const MANIFEST_NAME = "manifest.json";
   const MANIFEST_PATH = SCHEMAS_FOLDER + "/" + MANIFEST_NAME;
