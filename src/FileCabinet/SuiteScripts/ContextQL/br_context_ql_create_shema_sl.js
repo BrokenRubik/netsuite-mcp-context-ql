@@ -7,6 +7,11 @@ define(["N/file", "N/search", "N/ui/serverWidget"], function (
   search,
   ui,
 ) {
+  const CONTEXT_QL_FOLDER = "/SuiteScripts/ContextQL";
+  const SCHEMAS_FOLDER = "/SuiteScripts/ContextQL/TablesSchemas";
+  const MANIFEST_NAME = "manifest.json";
+  const MANIFEST_PATH = SCHEMAS_FOLDER + "/" + MANIFEST_NAME;
+
   function readFileCabinetAsString(id) {
     try {
       const f = file.load({ id });
@@ -16,25 +21,11 @@ define(["N/file", "N/search", "N/ui/serverWidget"], function (
       throw e;
     }
   }
-  const FOLDER_ID = 91202;
-  const MANIFEST_NAME = "manifest.json";
-  function findFileIdByName(name, folderId) {
-    const s = search.create({
-      type: "file",
-      filters: [["name", "is", name], "AND", ["folder", "anyof", folderId]],
-      columns: ["internalid"],
-    });
-    const r = s.run().getRange({ start: 0, end: 1 });
-    return r && r.length ? r[0].getValue("internalid") : null;
-  }
-  function findManifestId() {
-    return findFileIdByName(MANIFEST_NAME, FOLDER_ID);
-  }
+
   function readManifest() {
     try {
-      const id = findManifestId();
-      if (!id) return null;
-      const txt = readFileCabinetAsString(id);
+      const manifestFile = file.load({ id: MANIFEST_PATH });
+      const txt = manifestFile.getContents();
       const obj = JSON.parse(txt);
       return obj;
     } catch (e) {
@@ -50,7 +41,9 @@ define(["N/file", "N/search", "N/ui/serverWidget"], function (
       const form = ui.createForm({
         title: "Generate Catalog (Records Catalog) → File Cabinet",
       });
-      let html = readFileCabinetAsString("/SuiteScripts/context_ql_build_shema_index.html");
+      let html = readFileCabinetAsString(
+        "/SuiteScripts/ContextQL/br_context_ql_build_shema_index.html",
+      );
       html = html.replaceAll("%LAST_MSG%", lastMsg);
       const fld = form.addField({
         id: "custpage_html",
@@ -71,17 +64,37 @@ define(["N/file", "N/search", "N/ui/serverWidget"], function (
           data.name ||
           (data.action === "saveManifest" ? MANIFEST_NAME : "record.json");
         const safeName = rawName.replace(/[^a-z0-9._-]/gi, "_");
-        // Find if already exists and delete
-        const existingId = findFileIdByName(safeName, FOLDER_ID);
-        if (existingId) {
-          // requires delete permission in File Cabinet
-          file.delete({ id: existingId });
+
+        // Build full file path
+        const filePath = SCHEMAS_FOLDER + "/" + safeName;
+
+        // Try to delete existing file if it exists
+        try {
+          file.delete({ id: filePath });
+        } catch (e) {
+          // File doesn't exist, that's fine
         }
+
+        // Get the folder ID for TablesSchemas folder
+        const folderSearch = search.create({
+          type: "folder",
+          filters: [["name", "is", "TablesSchemas"]],
+          columns: ["internalid"],
+        });
+        const folderResult = folderSearch.run().getRange({ start: 0, end: 1 });
+
+        if (!folderResult || !folderResult.length) {
+          throw new Error("TablesSchemas folder not found. Please ensure it exists at /SuiteScripts/ContextQL/TablesSchemas");
+        }
+
+        const folderId = folderResult[0].getValue("internalid");
+
+        // Create new file using folder ID
         const f = file.create({
           fileType: file.Type.JSON,
           name: safeName,
           contents,
-          folder: FOLDER_ID,
+          folder: folderId,
           isOnline: false,
         });
         const id = f.save();

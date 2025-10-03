@@ -236,9 +236,10 @@
       const allItems = recordTypes && recordTypes.data ? recordTypes.data : [];
       // Filter to only available records
       const items = allItems.filter(item => item.isAvailable === true);
-      const total = items.length || 0;
+      let total = items.length || 0;
       const totalAll = allItems.length || 0;
       let completed = 0;
+
       progressText.textContent = `Found ${total} available record types to process (${totalAll - total} unavailable filtered out, ${CONCURRENT_REQUESTS} concurrent requests)`;
       log(
         "Record types: " +
@@ -248,37 +249,75 @@
           " concurrently)",
       );
 
-      // Process function for each record type
-      async function processRecordType(rt, index) {
-        const scriptId = rt.id;
+      // Set to track discovered subrecords (moved outside processRecordType)
+      const discoveredSubrecords = new Set();
 
-        // The exact detailType can be adjusted; here we leave it as SS_ANAL as in your example:
+      // Shared function to process any record (main or subrecord)
+      async function processRecord(recordId, recordType = 'record', updateProgress = false) {
         const dataDetail = encodeURI(
-          JSON.stringify({ scriptId: scriptId, detailType: "SS_ANAL" }),
+          JSON.stringify({ scriptId: recordId, detailType: "SS_ANAL" }),
         );
         const detUrl = rc + "?action=getRecordTypeDetail&data=" + dataDetail;
 
         const detResp = await xhrGet(detUrl);
         const detailObj = JSON.parse(detResp);
-        
-        // Clean the response data to remove unnecessary information
         const cleanedObj = cleanResponseData(detailObj);
 
         const savePayload = {
           action: "save",
-          name: scriptId.toLowerCase() + ".json",
+          name: recordId.toLowerCase() + ".json",
           json: JSON.stringify(cleanedObj, null, 2),
         };
         await postToSuitelet(savePayload);
 
-        // Update progress
-        completed++;
-        const pct = total ? Math.round((completed / total) * 100) : 0;
-        fill.style.width = pct + "%";
-        status.textContent = `Processing: ${completed}/${total} completed (${pct}%)`;
-        progressText.textContent = `Progress: ${completed}/${total} (${pct}%) - ${scriptId} completed`;
+        // Only update progress for main records
+        if (updateProgress) {
+          completed++;
+          const pct = total ? Math.round((completed / total) * 100) : 0;
+          fill.style.width = pct + "%";
+          status.textContent = `Processing: ${completed}/${total} completed (${pct}%)`;
+          progressText.textContent = `Progress: ${completed}/${total} (${pct}%) - ${recordId} completed`;
+        } else {
+          // For subrecords, just show current activity without changing main progress
+          progressText.textContent = `Progress: ${completed}/${total} - processing ${recordType} ${recordId}`;
+        }
 
-        log("✔ Saved: " + scriptId.toLowerCase() + ".json");
+        log(`✔ Saved ${recordType}: ${recordId.toLowerCase()}.json`);
+        return { recordId, detailObj };
+      }
+
+      // Process function for each main record type
+      async function processRecordType(rt, index) {
+        const scriptId = rt.id;
+
+        // Process the main record (update progress for main records)
+        const { detailObj } = await processRecord(scriptId, 'record', true);
+
+        // Process subrecords immediately if they exist
+        if (detailObj.data && detailObj.data.subrecords && Array.isArray(detailObj.data.subrecords)) {
+          log(`Found ${detailObj.data.subrecords.length} subrecords in ${scriptId}`);
+
+          for (const subrecord of detailObj.data.subrecords) {
+            if (subrecord.id) {
+              try {
+                log(`→ Processing subrecord: ${subrecord.id}`);
+                // Don't update main progress for subrecords
+                await processRecord(subrecord.id, 'subrecord', false);
+
+                // Add to processed list for manifest
+                discoveredSubrecords.add(JSON.stringify({
+                  id: subrecord.id,
+                  label: subrecord.label || subrecord.id,
+                  originalId: subrecord.id,
+                  type: 'subrecord'
+                }));
+              } catch (subError) {
+                log(`✖ Error processing subrecord ${subrecord.id}: ${subError.message}`);
+              }
+            }
+          }
+        }
+
         return scriptId;
       }
 
@@ -297,14 +336,22 @@
         }
       });
 
+      // Subrecords were processed inline, just log the summary
+      const subrecordItems = Array.from(discoveredSubrecords).map(jsonStr => JSON.parse(jsonStr));
+      log(`Total subrecords processed inline: ${subrecordItems.length}`);
+
       // Save/update manifest.json
       try {
-        // Create tables list for manifest
-        const tablesList = items.map(item => ({
+        // Create tables list for manifest - include both main records and subrecords
+        const mainTablesList = items.map(item => ({
           id: item.id.toLowerCase(),
           label: item.label || item.id,
-          originalId: item.id
+          originalId: item.id,
+          type: 'record'
         }));
+
+        // subrecordItems already contains the processed subrecords with correct format
+        const tablesList = [...mainTablesList, ...subrecordItems];
         
         const completionTimestamp = nowIsoLocal();
         await postToSuitelet({

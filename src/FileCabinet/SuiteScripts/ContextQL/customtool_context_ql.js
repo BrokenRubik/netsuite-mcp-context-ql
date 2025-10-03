@@ -1,12 +1,12 @@
 /**
- * customtool_get_tableIds.js
+ * customtool_context_ql.js
  * @NApiVersion 2.1
  * @NModuleScope Public
  */
 
 define(["N/file"], function (nFile) {
-  const MANIFEST_PATH = "/SuiteScripts/Tables Schemas/manifest.json";
-  const SCHEMAS_FOLDER = "/SuiteScripts/Tables Schemas/";
+  const MANIFEST_PATH = "/SuiteScripts/ContextQL/TablesSchemas/manifest.json";
+  const SCHEMAS_FOLDER = "/SuiteScripts/ContextQL/TablesSchemas/";
   
   return {
     listTables: function (args) {
@@ -78,7 +78,7 @@ define(["N/file"], function (nFile) {
           });
 
           const tableContent = tableFile.getContents();
-          
+
           try {
             const tableDetails = JSON.parse(tableContent);
             return {
