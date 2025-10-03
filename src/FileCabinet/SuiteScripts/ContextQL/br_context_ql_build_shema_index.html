@@ -1,4 +1,3 @@
-
 <style>
   .bar {
     height: 10px;
@@ -160,65 +159,69 @@
     // Clean and filter the response data to keep only essential SuiteQL information
     function cleanResponseData(responseData) {
       if (!responseData || !responseData.data) return responseData;
-      
+
       const data = responseData.data;
-      
+
       // Clean the main data object - keep only specific fields
       const cleanedData = {
         availabilityDetails: data.availabilityDetails,
         id: data.id,
         isAvailable: data.isAvailable,
-        label: data.label
+        label: data.label,
       };
-      
+
       // Process fields array
       if (data.fields && Array.isArray(data.fields)) {
         cleanedData.fields = data.fields
-          .filter(field => field.isAvailable === true) // Only keep available fields
-          .map(field => {
+          .filter((field) => field.isAvailable === true) // Only keep available fields
+          .map((field) => {
             const cleanField = {
               id: field.id,
               isAvailable: field.isAvailable,
               dataType: field.dataType,
               fieldType: field.fieldType,
               isColumn: field.isColumn,
-              label: field.label
+              label: field.label,
             };
-            
+
             // Process joins for this field
             if (field.joins && Array.isArray(field.joins)) {
-              cleanField.joins = field.joins.map(join => {
+              cleanField.joins = field.joins.map((join) => {
                 const cleanJoin = {
                   fieldId: join.fieldId,
                   cardinality: join.cardinality,
                   isAvailable: join.isAvailable,
                   label: join.label,
-                  type: join.type
+                  type: join.type,
                 };
-                
+
                 // Add sourceTargetType information if available
                 if (join.sourceTargetType) {
                   cleanJoin.sourceTargetType = {
-                    id: join.sourceTargetType.id
+                    id: join.sourceTargetType.id,
                   };
-                  
+
                   // Add joinPairs if available
-                  if (join.sourceTargetType.joinPairs && Array.isArray(join.sourceTargetType.joinPairs)) {
-                    cleanJoin.sourceTargetType.joinPairs = join.sourceTargetType.joinPairs.map(pair => ({
-                      id: pair.id,
-                      label: pair.label
-                    }));
+                  if (
+                    join.sourceTargetType.joinPairs &&
+                    Array.isArray(join.sourceTargetType.joinPairs)
+                  ) {
+                    cleanJoin.sourceTargetType.joinPairs =
+                      join.sourceTargetType.joinPairs.map((pair) => ({
+                        id: pair.id,
+                        label: pair.label,
+                      }));
                   }
                 }
-                
+
                 return cleanJoin;
               });
             }
-            
+
             return cleanField;
           });
       }
-      
+
       return cleanedData;
     }
 
@@ -235,7 +238,7 @@
 
       const allItems = recordTypes && recordTypes.data ? recordTypes.data : [];
       // Filter to only available records
-      const items = allItems.filter(item => item.isAvailable === true);
+      const items = allItems.filter((item) => item.isAvailable === true);
       let total = items.length || 0;
       const totalAll = allItems.length || 0;
       let completed = 0;
@@ -243,7 +246,10 @@
       progressText.textContent = `Found ${total} available record types to process (${totalAll - total} unavailable filtered out, ${CONCURRENT_REQUESTS} concurrent requests)`;
       log(
         "Record types: " +
-          total + " available (filtered out " + (totalAll - total) + " unavailable)" +
+          total +
+          " available (filtered out " +
+          (totalAll - total) +
+          " unavailable)" +
           " (processing " +
           CONCURRENT_REQUESTS +
           " concurrently)",
@@ -253,7 +259,11 @@
       const discoveredSubrecords = new Set();
 
       // Shared function to process any record (main or subrecord)
-      async function processRecord(recordId, recordType = 'record', updateProgress = false) {
+      async function processRecord(
+        recordId,
+        recordType = "record",
+        updateProgress = false,
+      ) {
         const dataDetail = encodeURI(
           JSON.stringify({ scriptId: recordId, detailType: "SS_ANAL" }),
         );
@@ -291,28 +301,38 @@
         const scriptId = rt.id;
 
         // Process the main record (update progress for main records)
-        const { detailObj } = await processRecord(scriptId, 'record', true);
+        const { detailObj } = await processRecord(scriptId, "record", true);
 
         // Process subrecords immediately if they exist
-        if (detailObj.data && detailObj.data.subrecords && Array.isArray(detailObj.data.subrecords)) {
-          log(`Found ${detailObj.data.subrecords.length} subrecords in ${scriptId}`);
+        if (
+          detailObj.data &&
+          detailObj.data.subrecords &&
+          Array.isArray(detailObj.data.subrecords)
+        ) {
+          log(
+            `Found ${detailObj.data.subrecords.length} subrecords in ${scriptId}`,
+          );
 
           for (const subrecord of detailObj.data.subrecords) {
             if (subrecord.id) {
               try {
                 log(`→ Processing subrecord: ${subrecord.id}`);
                 // Don't update main progress for subrecords
-                await processRecord(subrecord.id, 'subrecord', false);
+                await processRecord(subrecord.id, "subrecord", false);
 
                 // Add to processed list for manifest
-                discoveredSubrecords.add(JSON.stringify({
-                  id: subrecord.id,
-                  label: subrecord.label || subrecord.id,
-                  originalId: subrecord.id,
-                  type: 'subrecord'
-                }));
+                discoveredSubrecords.add(
+                  JSON.stringify({
+                    id: subrecord.id,
+                    label: subrecord.label || subrecord.id,
+                    originalId: subrecord.id,
+                    type: "subrecord",
+                  }),
+                );
               } catch (subError) {
-                log(`✖ Error processing subrecord ${subrecord.id}: ${subError.message}`);
+                log(
+                  `✖ Error processing subrecord ${subrecord.id}: ${subError.message}`,
+                );
               }
             }
           }
@@ -337,30 +357,36 @@
       });
 
       // Subrecords were processed inline, just log the summary
-      const subrecordItems = Array.from(discoveredSubrecords).map(jsonStr => JSON.parse(jsonStr));
+      const subrecordItems = Array.from(discoveredSubrecords).map((jsonStr) =>
+        JSON.parse(jsonStr),
+      );
       log(`Total subrecords processed inline: ${subrecordItems.length}`);
 
       // Save/update manifest.json
       try {
         // Create tables list for manifest - include both main records and subrecords
-        const mainTablesList = items.map(item => ({
+        const mainTablesList = items.map((item) => ({
           id: item.id.toLowerCase(),
           label: item.label || item.id,
           originalId: item.id,
-          type: 'record'
+          type: "record",
         }));
 
         // subrecordItems already contains the processed subrecords with correct format
         const tablesList = [...mainTablesList, ...subrecordItems];
-        
+
         const completionTimestamp = nowIsoLocal();
         await postToSuitelet({
           action: "saveManifest",
           name: "manifest.json",
-          json: JSON.stringify({ 
-            lastGenerated: completionTimestamp,
-            tables: tablesList
-          }, null, 2),
+          json: JSON.stringify(
+            {
+              lastGenerated: completionTimestamp,
+              tables: tablesList,
+            },
+            null,
+            2,
+          ),
         });
         lastmsg.innerHTML =
           "Last schema generated: <b>" + completionTimestamp + "</b>";
@@ -377,5 +403,3 @@
     btn.addEventListener("click", run);
   })();
 </script>
-
-

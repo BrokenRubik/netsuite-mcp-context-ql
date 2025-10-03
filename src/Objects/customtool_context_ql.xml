@@ -1,6 +1,6 @@
 <tool scriptid="customtool_context_ql">
   <name>Custom Tool - Context QL</name>
-    <rpcschema>[/SuiteScripts/ContextQL/customtool_context_ql.json]</rpcschema>
-    <scriptfile>[/SuiteScripts/ContextQL/customtool_context_ql.js]</scriptfile>
+  <rpcschema>[/SuiteScripts/ContextQL/customtool_context_ql.json]</rpcschema>
+  <scriptfile>[/SuiteScripts/ContextQL/customtool_context_ql.js]</scriptfile>
   <exposeto3rdpartyagents>T</exposeto3rdpartyagents>
 </tool>

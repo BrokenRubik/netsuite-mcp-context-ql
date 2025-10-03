@@ -7,7 +7,7 @@
 define(["N/file"], function (nFile) {
   const MANIFEST_PATH = "/SuiteScripts/ContextQL/TablesSchemas/manifest.json";
   const SCHEMAS_FOLDER = "/SuiteScripts/ContextQL/TablesSchemas/";
-  
+
   return {
     listTables: function (args) {
       try {
@@ -33,9 +33,9 @@ define(["N/file"], function (nFile) {
         let filteredTables = rawTables;
         if (args.search && args.search.trim()) {
           const searchTerm = args.search.trim().toLowerCase();
-          filteredTables = rawTables.filter(table => {
-            const id = (table.id || '').toLowerCase();
-            const label = (table.label || '').toLowerCase();
+          filteredTables = rawTables.filter((table) => {
+            const id = (table.id || "").toLowerCase();
+            const label = (table.label || "").toLowerCase();
             return id.includes(searchTerm) || label.includes(searchTerm);
           });
         }
@@ -65,7 +65,7 @@ define(["N/file"], function (nFile) {
       try {
         if (!args.id || !args.id.trim()) {
           return {
-            error: "Table ID is required"
+            error: "Table ID is required",
           };
         }
 
@@ -83,24 +83,22 @@ define(["N/file"], function (nFile) {
             const tableDetails = JSON.parse(tableContent);
             return {
               id: tableId,
-              details: tableDetails
+              details: tableDetails,
             };
           } catch (parseError) {
             return {
-              error: `Invalid JSON in table file ${tableId.toLowerCase()}.json: ${parseError.message}`
+              error: `Invalid JSON in table file ${tableId.toLowerCase()}.json: ${parseError.message}`,
             };
           }
-
         } catch (fileError) {
           return {
-            error: `Table file not found: ${tableId.toLowerCase()}.json. Please ensure the file exists at ${tableFilePath}`
+            error: `Table file not found: ${tableId.toLowerCase()}.json. Please ensure the file exists at ${tableFilePath}`,
           };
         }
-
       } catch (e) {
         const errorMessage = e instanceof Error ? e.message : String(e);
         return {
-          error: `Failed to load table details: ${errorMessage}`
+          error: `Failed to load table details: ${errorMessage}`,
         };
       }
     },

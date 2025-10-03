@@ -84,7 +84,9 @@ define(["N/file", "N/search", "N/ui/serverWidget"], function (
         const folderResult = folderSearch.run().getRange({ start: 0, end: 1 });
 
         if (!folderResult || !folderResult.length) {
-          throw new Error("TablesSchemas folder not found. Please ensure it exists at /SuiteScripts/ContextQL/TablesSchemas");
+          throw new Error(
+            "TablesSchemas folder not found. Please ensure it exists at /SuiteScripts/ContextQL/TablesSchemas",
+          );
         }
 
         const folderId = folderResult[0].getValue("internalid");
