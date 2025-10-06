@@ -10,7 +10,7 @@ This is a NetSuite SuiteCloud Development Framework (SDF) project that implement
 
 ### Custom Tool Structure
 - **Custom Tool Definition**: `src/Objects/customtool_context_ql.xml` - Defines the NetSuite custom tool configuration
-- **Tool Implementation**: `src/FileCabinet/SuiteScripts/ContextQL/customtool_get_table_ids.js` - Implements `listTables` and `getTableSchema` functions
+- **Tool Implementation**: `src/FileCabinet/SuiteScripts/ContextQL/customtool_context_ql.js` - Implements `listTables` and `getTableSchema` functions
 - **RPC Schema**: `src/FileCabinet/SuiteScripts/ContextQL/customtool_context_ql.json` - Defines the tool's API interface
 
 ### Schema Generation
