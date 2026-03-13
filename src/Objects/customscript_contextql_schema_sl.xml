@@ -1,0 +1,14 @@
+<suitelet scriptid="customscript_contextql_schema_sl">
+  <name>ContextQL Schema Generator</name>
+  <notifyowner>F</notifyowner>
+  <scriptfile>[/SuiteScripts/ContextQL/br_context_ql_create_shema_sl.js]</scriptfile>
+  <scriptdeployments>
+    <scriptdeployment scriptid="customdeploy_contextql_schema">
+      <title>ContextQL Schema Generator</title>
+      <isdeployed>T</isdeployed>
+      <status>RELEASED</status>
+      <loglevel>ERROR</loglevel>
+      <allroles>T</allroles>
+    </scriptdeployment>
+  </scriptdeployments>
+</suitelet>

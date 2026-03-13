@@ -1,6 +1,6 @@
 # NetSuite ContextQL Custom Tool
 
-A [NetSuite Custom Tool](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/article_162020236.html) that exposes your account's table schemas from the [Records Catalog](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_155929845760.html) to AI clients and integrations via the [Model Context Protocol (MCP)](https://modelcontextprotocol.io).
+A [NetSuite Custom Tool](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/article_162020236.html) that exposes your account's table schemas from the [Records Catalog](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_155929845760.html) to AI clients via the [NetSuite AI Connector Service (MCP)](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_0714082142.html).
 
 ## What This Does
 
@@ -13,18 +13,16 @@ Perfect for building AI-powered integrations, automating SuiteQL query generatio
 
 ## Prerequisites
 
-- NetSuite account with:
-  - SuiteScript feature enabled
+- NetSuite account (2025.2+) with:
+  - Server SuiteScript enabled
   - SuiteCloud Development Framework enabled
-  - Custom Tools feature enabled (2024.2+)
+  - OAuth 2.0 enabled
   - Administrator or appropriate role permissions
 - [SuiteCloud CLI installed](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_1558708810.html) (requires Node.js and Java)
 
 ## Installation
 
 ### 1. Install SuiteCloud CLI
-
-Follow the [official installation guide](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_1558708810.html):
 
 ```bash
 npm install -g @oracle/suitecloud-cli
@@ -38,65 +36,53 @@ cd netsuite-mcp-context-ql
 suitecloud account:setup
 ```
 
-Follow prompts to configure your NetSuite account credentials.
-
-### 3. Validate and Deploy
+### 3. Deploy
 
 ```bash
 suitecloud project:validate
 suitecloud project:deploy
 ```
 
-### 4. Create Schema Generator Suitelet
+This deploys:
+- The **Custom Tool** (`customtool_context_ql`) — exposed to the AI Connector Service
+- The **Schema Generator Suitelet** (`customscript_contextql_schema_sl`) — auto-deployed with script record and deployment, no manual setup needed
 
-After deployment, you must create a Suitelet script record to generate the table schemas:
+### 4. Generate Schemas (Required Before Use)
 
-1. **Navigate to:** Customization → Scripting → Scripts → New
-2. **Script File:** Select `/SuiteScripts/ContextQL/br_context_ql_create_shema_sl.js`
-3. **Name:** "ContextQL Schema Generator" (or your preference)
-4. **ID:** Leave as auto-generated or customize
-5. **Save**
+1. Go to **Customization > Scripting > Script Deployments**
+2. Find **"ContextQL Schema Generator"** and click its URL
+3. Click **"Generate JSONs"**
+4. Wait for completion (may take several minutes — keep the browser tab open)
 
-### 5. Deploy the Suitelet
+This creates individual JSON schema files for each record type in `/SuiteScripts/ContextQL/TablesSchemas/` plus a `manifest.json` index.
 
-1. Click **"Deploy Script"** on the script record
-2. **Status:** Released
-3. **Audience:** Administrator (or appropriate role)
-4. **Save** the deployment
-5. **Copy the external URL** from the deployment record - you'll need this to generate schemas
+**The Custom Tool will not work until schemas are generated.**
 
-See [Script Deployment](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_0706024425.html) for more details.
+### 5. Connect via AI Client
 
-### 6. Generate Schemas (Required Before Use)
+In [Claude](https://claude.ai):
 
-1. Navigate to the Suitelet deployment URL from step 5
-2. Click **"Generate Schemas"** button
-3. Wait for completion (may take several minutes)
+1. Go to **Settings > Connectors > Add custom connector**
+2. Enter the MCP server URL:
+   ```
+   https://<accountid>.suitetalk.api.netsuite.com/services/mcp/v1/all
+   ```
+3. Click **Add**, then **Connect**
+4. Authorize access to your NetSuite account
 
-This creates:
+See [Connecting to the AI Connector Service](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_0714082142.html) for full details.
 
-- Individual JSON files for each table in `/SuiteScripts/ContextQL/TablesSchemas/`
-- A `manifest.json` file indexing all available tables
+## Usage
 
-**Important:** The Custom Tool will not work until schemas are generated.
-
-## Testing
-
-### Test via AI Client
-
-If connected to an MCP-compatible AI client:
-
-**Example prompts:**
+Once connected, use natural language prompts:
 
 ```
 "List all NetSuite tables with 'customer' in the name"
 "Show me the schema for the transaction table"
-"What fields are available on the item record?"
+"What fields are available on the employee record?"
 ```
 
-### Test Programmatically
-
-The Custom Tool exposes two functions defined in [`customtool_context_ql.json`](src/FileCabinet/SuiteScripts/ContextQL/customtool_context_ql.json):
+### API Reference
 
 **`listTables(args)`**
 
@@ -126,9 +112,8 @@ The Custom Tool exposes two functions defined in [`customtool_context_ql.json`](
   "id": "customer",
   "details": {
     "fields": [
-      { "id": "id", "label": "Internal ID", "type": "INTEGER", "isAvailable": true },
-      { "id": "entityid", "label": "Name", "type": "STRING", "isAvailable": true },
-      // ... more fields
+      { "id": "id", "label": "Internal ID", "dataType": "INTEGER", "isAvailable": true },
+      { "id": "entityid", "label": "Name", "dataType": "STRING", "isAvailable": true }
     ]
   }
 }
@@ -138,33 +123,32 @@ The Custom Tool exposes two functions defined in [`customtool_context_ql.json`](
 
 ```
 NetSuite Records Catalog API
-         ↓
+         ↓ (browser-side, 10 concurrent requests)
 Schema Generator Suitelet → File Cabinet (/SuiteScripts/ContextQL/TablesSchemas/)
-         ↓
+         ↓ (N/file.load at runtime)
 Custom Tool (customtool_context_ql.js)
          ↓
-MCP / AI Clients / External Integrations
+AI Connector Service (MCP) → Claude / ChatGPT / External Integrations
 ```
 
 **Key Files:**
 
-- `src/Objects/customtool_context_ql.xml` - Custom Tool object definition
-- `src/FileCabinet/SuiteScripts/ContextQL/customtool_context_ql.js` - Tool implementation
-- `src/FileCabinet/SuiteScripts/ContextQL/customtool_context_ql.json` - RPC schema (MCP interface)
-- `src/FileCabinet/SuiteScripts/ContextQL/br_context_ql_create_shema_sl.js` - Schema generator Suitelet
+| File | Purpose |
+|------|---------|
+| `src/Objects/customtool_context_ql.xml` | Custom Tool SDF object definition |
+| `src/Objects/customscript_contextql_schema_sl.xml` | Suitelet SDF object + deployment |
+| `src/FileCabinet/SuiteScripts/ContextQL/customtool_context_ql.js` | Tool implementation |
+| `src/FileCabinet/SuiteScripts/ContextQL/customtool_context_ql.json` | RPC schema (tool interface) |
+| `src/FileCabinet/SuiteScripts/ContextQL/br_context_ql_create_shema_sl.js` | Schema generator Suitelet |
+| `src/FileCabinet/SuiteScripts/ContextQL/br_context_ql_build_shema_index.html` | Schema generator UI |
 
 ## Maintenance
 
 ### Regenerate Schemas
 
-NetSuite's Records Catalog changes when you add custom fields, records, or upgrade versions. Regenerate schemas by:
+NetSuite's Records Catalog changes when you add custom fields, records, or upgrade versions. Regenerate schemas by navigating to the Suitelet URL and clicking "Generate JSONs" again.
 
-1. Navigating to the Suitelet URL
-2. Clicking "Generate Schemas" again
-
-### Update Custom Tool
-
-After modifying code:
+### Update Code
 
 ```bash
 suitecloud project:validate
@@ -173,29 +157,17 @@ suitecloud project:deploy
 
 ## Notes
 
-⚠️ **Work in Progress** - This project is functional but has areas for improvement (error handling, automation, performance).
-
 - Only includes SuiteQL-compatible fields (`isAvailable: true` in Records Catalog)
 - Requires File Cabinet read permissions for `/SuiteScripts/ContextQL/`
 - Schema generation time varies based on account size and customization
-
-## Useful Commands
-
-```bash
-suitecloud project:validate           # Validate project structure
-suitecloud project:deploy             # Deploy to NetSuite
-suitecloud file:list                  # List File Cabinet files
-suitecloud object:import              # Import objects from account
-```
+- Custom Tool scripts cannot use `N/http`, `N/https`, or `N/sftp` modules
 
 ## Resources
 
-- [NetSuite Custom Tools Overview](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/article_162020236.html)
-- [Records Catalog Documentation](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_155929845760.html)
-- [SuiteCloud CLI Reference](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/chapter_155931263126.html)
-- [Custom Tool API Guide](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/article_0902023450.html)
-- [Model Context Protocol](https://modelcontextprotocol.io)
-
-## Contributing
-
-Contributions welcome! Open an issue or PR to improve this tool.
+- [NetSuite Custom Tools](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/article_1185045525.html)
+- [Custom Tool Script Module](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_0724071739.html)
+- [Custom Tool RPC Schema](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_0724092648.html)
+- [AI Connector Service Connection](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_0714082142.html)
+- [Records Catalog](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_155929845760.html)
+- [SuiteCloud CLI](https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/chapter_155931263126.html)
+- [Oracle MCP Sample Tools](https://github.com/oracle-samples/netsuite-suitecloud-samples/tree/main/MCP-Sample-Tools)

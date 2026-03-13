@@ -38,7 +38,7 @@ define(["N/file", "N/search", "N/ui/serverWidget"], function (
         ? "Last schema generated: <b>" + manifest.lastGenerated + "</b>"
         : "Never generated";
       const form = ui.createForm({
-        title: "Generate Catalog (Records Catalog) → File Cabinet",
+        title: "Generate Catalog (Records Catalog) \u2192 File Cabinet",
       });
       let html = readFileCabinetAsString(
         "/SuiteScripts/ContextQL/br_context_ql_build_shema_index.html",
